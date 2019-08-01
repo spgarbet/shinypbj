@@ -38,7 +38,11 @@ css <- "
   color: #333 !important;
   cursor: not-allowed !important;
   border-color: #aaa !important;
-}"
+}
+.papaya-toolbar span#File {
+  display: none;
+}
+"
 
 pain_images <- function(patient)
 {
@@ -52,10 +56,6 @@ pain_images <- function(patient)
     )
     names(fnames)  = neurobase::nii.stub(fnames, bn = TRUE)
     fnames
-    
-    #fnames = ws_img_data()
-    #names(fnames) = neurobase::nii.stub(fnames, bn = TRUE)
-    #fnames
 }
 
 # Define UI for application that draws a histogram
@@ -92,21 +92,70 @@ ui <- fluidPage(
     )
 )
 
+hideVisualizer <- function()
+{
+  shinyjs::hide("visualize")
+  shinyjs::hide("dataRow")
+}
+showVisualizer <- function()
+{
+  shinyjs::show("visualize")
+  shinyjs::show("dataRow")
+}
+hideUpload <- function()
+{
+  shinyjs::hide("studydata")
+  shinyjs::hide("varimages")
+  shinyjs::hide("template")
+  shinyjs::hide("mask")
+}
+showUpload <- function()
+{
+  shinyjs::show("studydata")
+  shinyjs::show("varimages")
+  shinyjs::show("template")
+  shinyjs::show("mask")
+}
+dataUploaded <- function(input)
+{
+  !is.null(input$studydata) &&
+  !is.null(input$varimages) &&
+  !is.null(input$template )
+}
+
 # Define server logic required to draw a histogram
 server <- function(input, output) {
     
     js$disableTab("Inference")
     js$disableTab("Visualize")
-    shinyjs::disable("studydata")
-    shinyjs::disable("varimages")
-    shinyjs::disable("template")
-    shinyjs::disable("mask")
+    hideUpload()
 
     output$visualize <- renderPapaya({
         fnames <- pain_images(as.numeric(input$dataRow))
         img    <- papaya(fnames)
         img$elementId <- NULL
         img
+    })
+
+    observeEvent(input$source, {
+      if(input$source == "Upload")
+      {
+        showUpload()
+        if(!dataUploaded(input)) hideVisualizer()
+      } else {
+        hideUpload()
+        showVisualizer()
+      }
+    })
+    
+    observeEvent(input$studydata, {
+      if(dataUploaded(input)) showVisualizer()
+    })
+    observeEvent(input$varimages, {
+      if(dataUploaded(input)) showVisualizer()
+    })
+    observeEvent(input$template,  {
+      if(dataUploaded(input)) showVisualizer()
     })
 }
 
