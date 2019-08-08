@@ -127,11 +127,13 @@ hideVisualizer <- function()
 {
   shinyjs::hide("visualize")
   shinyjs::hide("dataRow")
+  js$disableTab("Model")
 }
 showVisualizer <- function()
 {
   shinyjs::show("visualize")
   shinyjs::show("dataRow")
+  js$enableTab("Model")
 }
 disableUpload <- function()
 {
