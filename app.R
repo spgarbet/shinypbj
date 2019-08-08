@@ -13,6 +13,11 @@ library(pain21)
 library(pbj)
 library(papayaWidget)
 
+# Allow upload of bigger files
+# from http://stackoverflow.com/questions/18037737/how-to-change-maximum-upload-size-exceeded-restriction-in-shiny-and-save-user
+# The first number is the number of MB
+options(shiny.maxRequestSize=30*1024^2)
+
 # Javascript to enable/disable tabs
 # https://stackoverflow.com/questions/31703241/activate-tabpanel-from-another-tabpanel/31719425#31719425
 jscode <- "
@@ -116,7 +121,11 @@ ui <- fluidPage(
           papayaOutput("visualize")
         )
       ),
-      tabPanel(title="Model"),
+      tabPanel(title="Model",
+        fluidPage(
+          tableOutput("variables")
+        )
+      ),
       tabPanel(title="Inference"),
       tabPanel(title="Visualize"),
       tabPanel(title="Back Matter")
@@ -158,8 +167,24 @@ dataUploaded <- function(input)
   !is.null(input$template )
 }
 
+
 # Define server logic required to draw a histogram
 server <- function(input, output) {
+  
+  studydata <- reactive({
+    if(input$source == "Upload") 
+    {
+      input$studydata
+    } else {
+      pain21()$data 
+    }
+  })
+  
+  varsToModel <- reactive({
+    req(studydata())
+    
+    names(studydata())
+  })
     
     js$disableTab("Inference")
     js$disableTab("Visualize")
@@ -170,6 +195,10 @@ server <- function(input, output) {
         img    <- papaya(fnames)
         img$elementId <- NULL
         img
+    })
+    
+    output$variables <- renderText({
+      varsToModel()
     })
 
     observeEvent(input$source, {
@@ -192,6 +221,8 @@ server <- function(input, output) {
     observeEvent(input$template,  {
       if(dataUploaded(input)) showVisualizer()
     })
+    
+   
 }
 
 # Run the application 
