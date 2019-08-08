@@ -16,19 +16,33 @@ library(papayaWidget)
 # Javascript to enable/disable tabs
 # https://stackoverflow.com/questions/31703241/activate-tabpanel-from-another-tabpanel/31719425#31719425
 jscode <- "
-shinyjs.disableTab = function(name) {
+shinyjs.disableTab = function(name)
+{
   var tab = $('.nav li a[data-value=' + name + ']');
-  tab.bind('click.tab', function(e) {
+  tab.bind('click.tab', function(e)
+  {
     e.preventDefault();
     return false;
   });
   tab.addClass('disabled');
 }
 
-shinyjs.enableTab = function(name) {
+shinyjs.enableTab = function(name)
+{
   var tab = $('.nav li a[data-value=' + name + ']');
   tab.unbind('click.tab');
   tab.removeClass('disabled');
+}
+
+shinyjs.disableDiv = function(name)
+{
+  var div = $('#'+name);
+  div.addClass('disabled')
+}
+shinyjs.enableDiv = function(name)
+{
+  var div = $('#'+name);
+  div.removeClass('disabled')
 }
 "
 
@@ -41,6 +55,18 @@ css <- "
 }
 .papaya-toolbar span#File {
   display: none;
+}
+
+div#fileuploadbox
+{
+  border:  1px solid #333;
+  padding: 5px;
+}
+div.disabled
+{
+  background-color: #ccc !important;
+  color: #aaa !important;
+  font-style: oblique;
 }
 "
 
@@ -75,12 +101,17 @@ ui <- fluidPage(
             c("Pain 21 Study", "Upload"),
             "Pain 21 Study"
           ),
-          fileInput("studydata", "Study Data"),
-          fileInput("varimages", "Var Images"),
-          fileInput("template",  "Template Nifti Location"),
-          fileInput("mask",      "Mask Nifti Location"),
+          div(id="fileuploadbox",
+            splitLayout(
+              fileInput("studydata", "Study Data"),
+              fileInput("varimages", "Var Images")
+            ),
+            splitLayout(
+              fileInput("template",  "Template Nifti Location"),
+              fileInput("mask",      "Mask Nifti Location")
+            )
+          ),
 
-          hr(),
           selectInput("dataRow", h3("Data Row"), choices=as.list(1:21), selected=1),
           papayaOutput("visualize")
         )
@@ -102,19 +133,21 @@ showVisualizer <- function()
   shinyjs::show("visualize")
   shinyjs::show("dataRow")
 }
-hideUpload <- function()
+disableUpload <- function()
 {
-  shinyjs::hide("studydata")
-  shinyjs::hide("varimages")
-  shinyjs::hide("template")
-  shinyjs::hide("mask")
+  shinyjs::disable("studydata")
+  shinyjs::disable("varimages")
+  shinyjs::disable("template")
+  shinyjs::disable("mask")
+  js$disableDiv("fileuploadbox")
 }
-showUpload <- function()
+enableUpload <- function()
 {
-  shinyjs::show("studydata")
-  shinyjs::show("varimages")
-  shinyjs::show("template")
-  shinyjs::show("mask")
+  shinyjs::enable("studydata")
+  shinyjs::enable("varimages")
+  shinyjs::enable("template")
+  shinyjs::enable("mask")
+  js$enableDiv("fileuploadbox")
 }
 dataUploaded <- function(input)
 {
@@ -128,7 +161,7 @@ server <- function(input, output) {
     
     js$disableTab("Inference")
     js$disableTab("Visualize")
-    hideUpload()
+    disableUpload()
 
     output$visualize <- renderPapaya({
         fnames <- pain_images(as.numeric(input$dataRow))
@@ -140,10 +173,10 @@ server <- function(input, output) {
     observeEvent(input$source, {
       if(input$source == "Upload")
       {
-        showUpload()
+        enableUpload()
         if(!dataUploaded(input)) hideVisualizer()
       } else {
-        hideUpload()
+        disableUpload()
         showVisualizer()
       }
     })
