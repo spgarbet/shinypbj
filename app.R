@@ -95,7 +95,7 @@ ui <- fluidPage(
     extendShinyjs(text=jscode),
     inlineCSS(css),
     # Application title
-    titlePanel("Shiny PBJ"),
+    titlePanel(title=div(img(src="pbj-transparent.png", style="width: 50px"), "Shiny PBJ")),
     
     tabsetPanel(
       tabPanel(title="Data",
