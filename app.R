@@ -18,6 +18,9 @@ library(papayaWidget)
 # The first number is the number of MB
 options(shiny.maxRequestSize=30*1024^2)
 
+# File types to accept for upload
+accept <- c("text/csv", "text/comma-separated-values","text/plain", ".csv")
+
 # Javascript to enable/disable tabs
 # https://stackoverflow.com/questions/31703241/activate-tabpanel-from-another-tabpanel/31719425#31719425
 jscode <- "
@@ -108,7 +111,7 @@ ui <- fluidPage(
           ),
           div(id="fileuploadbox",
             splitLayout(
-              fileInput("studydata", "Study Data"),
+              fileInput("studydata", "Study Data", accept=accept),
               fileInput("varimages", "Var Images")
             ),
             splitLayout(
@@ -186,7 +189,7 @@ server <- function(input, output) {
   studydata <- reactive({
     if(input$source == "Upload") 
     {
-      input$studydata
+      read.csv(input$studydata$datapath, header=TRUE)
     } else {
       pain21()$data 
     }
