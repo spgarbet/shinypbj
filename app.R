@@ -123,7 +123,10 @@ ui <- fluidPage(
       ),
       tabPanel(title="Model",
         fluidPage(
-          tableOutput("variables")
+          hr(),
+          tableOutput("variables"),
+          hr(),
+          uiOutput("histograms")
         )
       ),
       tabPanel(title="Inference"),
@@ -138,12 +141,21 @@ hideVisualizer <- function()
   shinyjs::hide("dataRow")
   js$disableTab("Model")
 }
-showVisualizer <- function()
+
+showVisualizer <- function(output, data)
 {
   shinyjs::show("visualize")
   shinyjs::show("dataRow")
   js$enableTab("Model")
+  
+  output$histograms <- renderUI({
+    vars <- Filter(function(i) length(intersect(class(data[[i]]), c("integer", "numeric"))) > 0, names(data))
+    lapply(vars, function(i) {
+       renderPlot(hist(data[[i]], main=i, xlab=""))
+    })
+  })
 }
+
 disableUpload <- function()
 {
   shinyjs::disable("studydata")
@@ -186,43 +198,42 @@ server <- function(input, output) {
     names(studydata())
   })
     
-    js$disableTab("Inference")
-    js$disableTab("Visualize")
-    disableUpload()
+  js$disableTab("Inference")
+  js$disableTab("Visualize")
+  disableUpload()
 
-    output$visualize <- renderPapaya({
-        fnames <- pain_images(as.numeric(input$dataRow))
-        img    <- papaya(fnames)
-        img$elementId <- NULL
-        img
-    })
+  output$visualize <- renderPapaya({
+    fnames <- pain_images(as.numeric(input$dataRow))
+    img    <- papaya(fnames)
+    img$elementId <- NULL
+    img
+  })
     
-    output$variables <- renderText({
-      varsToModel()
-    })
+  output$variables <- renderText({
+   paste("Variables Provided:", paste(varsToModel(), collapse=", "))
+  })
 
-    observeEvent(input$source, {
-      if(input$source == "Upload")
-      {
-        enableUpload()
-        if(!dataUploaded(input)) hideVisualizer()
-      } else {
-        disableUpload()
-        showVisualizer()
-      }
-    })
+  observeEvent(input$source, {
+    if(input$source == "Upload")
+    {
+      enableUpload()
+      if(!dataUploaded(input)) hideVisualizer()
+    } else {
+      disableUpload()
+      showVisualizer(output, studydata())
+    }
+  })
     
-    observeEvent(input$studydata, {
-      if(dataUploaded(input)) showVisualizer()
-    })
-    observeEvent(input$varimages, {
-      if(dataUploaded(input)) showVisualizer()
-    })
-    observeEvent(input$template,  {
-      if(dataUploaded(input)) showVisualizer()
-    })
-    
-   
+  observeEvent(input$studydata, {
+    if(dataUploaded(input)) showVisualizer(output, studydata())
+  })
+  observeEvent(input$varimages, {
+    if(dataUploaded(input)) showVisualizer(output, studydata())
+  })
+  observeEvent(input$template,  {
+    if(dataUploaded(input)) showVisualizer(output, studydata())
+  })
+
 }
 
 # Run the application 
