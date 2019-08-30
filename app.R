@@ -129,6 +129,7 @@ ui <- fluidPage(
           hr(),
           tableOutput("variables"),
           hr(),
+          textInput("formula", "Formula", "~1"),
           uiOutput("histograms")
         )
       ),
@@ -137,6 +138,16 @@ ui <- fluidPage(
       tabPanel(title="Back Matter")
     )
 )
+
+hideInference <- function()
+{
+  js$disableTab("Inference") 
+}
+
+showInference <- function()
+{
+  js$enableTab("Inference")
+}
 
 hideVisualizer <- function()
 {
@@ -180,6 +191,13 @@ dataUploaded <- function(input)
   !is.null(input$studydata) &&
   !is.null(input$varimages) &&
   !is.null(input$template )
+}
+
+validFormula <- function(data, formula)
+{
+   available <- names(data)
+   specified <- all.vars(formula)
+   all(sapply(specified, function(x) x %in% available))
 }
 
 
@@ -235,6 +253,16 @@ server <- function(input, output) {
   })
   observeEvent(input$template,  {
     if(dataUploaded(input)) showVisualizer(output, studydata())
+  })
+  observeEvent(input$formula, {
+    tryCatch(
+      {
+        if(validFormula(studydata(), as.formula(input$formula)))
+          showInference() else
+          hideInference()
+      },
+      error=function(cond) {hideInference()}
+    )  
   })
 
 }
