@@ -76,6 +76,22 @@ div.disabled
   color: #aaa !important;
   font-style: oblique;
 }
+div#formulaFullFeedback
+{
+  vertical-align: middle;
+  display: table-cell;
+  color: #f00 !important;
+  font-style: oblique;
+  height: 60px;
+}
+div#formulaReducedFeedback
+{
+  vertical-align: middle;
+  display: table-cell;
+  color: #f00 !important;
+  font-style: oblique;
+  height: 60px;
+}
 "
 
 pain_images <- function(patient)
@@ -129,7 +145,14 @@ ui <- fluidPage(
           hr(),
           tableOutput("variables"),
           hr(),
-          textInput("formula", "Formula", "~1"),
+          splitLayout(
+            textInput("formulaFull",    "Formula Full", "~1"),
+            textOutput("formulaFullFeedback")
+          ),
+          splitLayout(
+            textInput("formulaReduced",    "Formula Reduced", "~1"),
+            textOutput("formulaReducedFeedback")
+          ),
           uiOutput("histograms")
         )
       ),
@@ -193,13 +216,27 @@ dataUploaded <- function(input)
   !is.null(input$template )
 }
 
-validFormula <- function(data, formula)
+validFormula <- function(formula, data)
 {
    available <- names(data)
    specified <- all.vars(formula)
    all(sapply(specified, function(x) x %in% available))
 }
 
+formulaErrors <- function(formula, data)
+{
+  tryCatch(
+    {
+      f <- as.formula(formula)
+      available <- names(data)
+      specified <- all.vars(f)
+      exists    <- sapply(specified, function(x) x %in% available)
+      if(all(exists)) NULL else
+        paste("Not in data.frame:", paste(specified[!exists], collapse=", "))
+    },
+    error=function(cond) {cond$message}
+  )  
+}
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
@@ -213,6 +250,18 @@ server <- function(input, output) {
     }
   })
   
+  formulaFull <- reactive({
+    e <- formulaErrors(input$formulaFull, studydata())
+    need(!is.null(e), e) 
+    as.formula(input$formulaFull)
+  })
+  
+  formulaReduced <- reactive({
+    e <- formulaErrors(input$formulaReduced, studydata())
+    need(!is.null(e), e) 
+    as.formula(input$formulaReduced)
+  })
+  
   varsToModel <- reactive({
     req(studydata())
     
@@ -222,7 +271,7 @@ server <- function(input, output) {
   js$disableTab("Inference")
   js$disableTab("Visualize")
   disableUpload()
-
+  
   output$visualize <- renderPapaya({
     fnames <- pain_images(as.numeric(input$dataRow))
     img    <- papaya(fnames)
@@ -254,16 +303,38 @@ server <- function(input, output) {
   observeEvent(input$template,  {
     if(dataUploaded(input)) showVisualizer(output, studydata())
   })
-  observeEvent(input$formula, {
-    tryCatch(
-      {
-        if(validFormula(studydata(), as.formula(input$formula)))
-          showInference() else
-          hideInference()
-      },
-      error=function(cond) {hideInference()}
-    )  
+  observeEvent(input$formulaFull, {
+    if(is.null(formulaErrors(input$formulaFull, studydata())) &&
+       is.null(formulaErrors(input$formulaReduced, studydata())))
+      showInference() else
+      hideInference()
   })
+  observeEvent(input$formulaReduced, {
+    if(is.null(formulaErrors(input$formulaFull, studydata())) &&
+       is.null(formulaErrors(input$formulaReduced, studydata())))
+      showInference() else
+      hideInference()
+  })
+
+  output$formulaFullFeedback <- renderText({
+    formulaErrors(input$formulaFull, studydata())
+  })
+  output$formulaReducedFeedback <- renderText({
+    formulaErrors(input$formulaReduced, studydata())
+  })
+  
+  
+  # observeEvent(input$formula_reduced, {
+  #   tryCatch(
+  #     {
+  #       if(validFormula(studydata(), as.formula(input$formula_full)) &&
+  #          validFormula(studydata(), as.formula(input$formula_reduced)))
+  #         showInference() else
+  #         hideInference()
+  #     },
+  #     error=function(cond) {hideInference()}
+  #   )  
+  # })
 
 }
 
