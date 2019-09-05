@@ -150,7 +150,7 @@ ui <- fluidPage(
             textOutput("formulaFullFeedback")
           ),
           splitLayout(
-            textInput("formulaReduced",    "Formula Reduced", "~1"),
+            textInput("formulaReduced",    "Formula Reduced", ""),
             textOutput("formulaReducedFeedback")
           ),
           uiOutput("histograms")
@@ -225,6 +225,7 @@ validFormula <- function(formula, data)
 
 formulaErrors <- function(formula, data)
 {
+  if(is.character(formula) && formula=="") return(NULL)
   tryCatch(
     {
       f <- as.formula(formula)
